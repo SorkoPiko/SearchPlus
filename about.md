@@ -1,0 +1,3 @@
+# SearchPlus
+
+Search faster.
