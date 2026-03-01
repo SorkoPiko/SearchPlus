@@ -24,5 +24,23 @@
 	],
 	"dependencies": {
 		"geode.node-ids": ">=v1.23.0"
+	},
+	"settings": {
+		"search-category": {
+			"name": "Search Settings",
+			"type": "title",
+			"description": "Control how the search function works."
+		},
+		"debounceTime": {
+			"name": "Debounce Time (ms)",
+			"type": "int",
+			"default": 350,
+			"description": "The amount of time to wait after you stop typing before performing a search (in milliseconds).",
+			"min": 100,
+			"max": 1000,
+			"control": {
+				"slider": true
+			}
+		}
 	}
 }
