@@ -95,7 +95,9 @@ class $modify(SPLevelSearchLayer, LevelSearchLayer) {
 
         CCNode* searchMenu = getChildByID("search-button-menu");
 
-        auto pageSprite = Build<CCSprite>::create("GJ_button_02.png");
+        auto pageSprite = Build<CCSprite>::create("GJ_button_02.png")
+            .scale(0.75f);
+
         m_fields->pageText = Build<CCLabelBMFont>::create("0", "bigFont.fnt")
             .pos(pageSprite->getContentSize() / 2.0f + ccp(0.0f, 1.0f))
             .limitLabelWidth(32.0f, 0.8f, 0.0f)
@@ -124,8 +126,9 @@ class $modify(SPLevelSearchLayer, LevelSearchLayer) {
             .visible(false)
             .id("page-button"_spr)
             .parent(searchMenu)
-            .matchPos(searchMenu->getChildByID("clear-search-button"))
-            .move({55.0f, 0.0f});
+            .matchPos(m_fields->searchList)
+            .move(m_fields->searchList->getScaledContentSize() / 2.0f)
+            .move({5.0f, 5.0f});
 
         m_fields->searchDelegate.setFinishedCallback([this](CCArray* levels, const char* key) {
             if (!m_fields->searchObject || strcmp(m_fields->searchObject->getKey(), key) != 0) return;
@@ -319,6 +322,7 @@ class $modify(SPLevelSearchLayer, LevelSearchLayer) {
 
     void showQuery() {
         m_fields->searchList->setVisible(m_fields->searchObject);
+        if (!m_fields->searchObject) m_fields->loadingSpinner->setVisible(false);
         m_fields->pageButton->setVisible(m_fields->searchObject);
         m_fields->pageText->setString(m_fields->searchObject ? std::to_string(m_fields->searchObject->m_page + 1).c_str() : "0");
         m_fields->pageText->limitLabelWidth(32.0f, 0.8f, 0.0f);

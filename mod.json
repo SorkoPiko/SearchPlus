@@ -10,13 +10,12 @@
 	"name": "SearchPlus",
 	"version": "v1.0.0",
 	"developer": "SorkoPiko",
-	"description": "Search faster",
+	"description": "See search results as you type",
 	"links": {
 		"source": "https://github.com/SorkoPiko/SearchPlus",
 		"community": "https://discord.gg/8uPFxhxBX9"
 	},
 	"tags": [
-		"offline",
 		"online",
 		"enhancement",
 		"interface",
@@ -35,7 +34,7 @@
 			"name": "Debounce Time (ms)",
 			"type": "int",
 			"default": 350,
-			"description": "The amount of time to wait after you stop typing before performing a search (in milliseconds).",
+			"description": "The amount of time to wait after you stop typing before performing a search (in milliseconds). Setting this too low could result in ratelimiting. It's not recommended to go below 350ms.",
 			"min": 100,
 			"max": 1000,
 			"control": {
