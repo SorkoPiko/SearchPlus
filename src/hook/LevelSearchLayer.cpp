@@ -128,7 +128,6 @@ class $modify(SPLevelSearchLayer, LevelSearchLayer) {
             .move({55.0f, 0.0f});
 
         m_fields->searchDelegate.setFinishedCallback([this](CCArray* levels, const char* key) {
-            log::debug("finished {}", key);
             if (!m_fields->searchObject || strcmp(m_fields->searchObject->getKey(), key) != 0) return;
 
             populateList(levels);
@@ -298,7 +297,6 @@ class $modify(SPLevelSearchLayer, LevelSearchLayer) {
     }
 
     void updateQuery(GJSearchObject* newObject) {
-        log::debug("new query with page {}", newObject ? newObject->m_page : -1);
         if (newObject && newObject->m_searchQuery.empty() && newObject->m_searchType == SearchType::Search) {
             newObject = nullptr;
         }
