@@ -22,16 +22,6 @@ void forceSetTouchPrio(CCNode* node, const int prio) {
     }
 }
 
-std::vector<std::string> splitString(const std::string& str, const char delimiter) {
-    std::vector<std::string> tokens;
-    std::stringstream ss(str);
-    std::string token;
-    while (std::getline(ss, token, delimiter)) {
-        tokens.push_back(token);
-    }
-    return tokens;
-}
-
 enum class LoadingState {
     NotLoading,
     LoadingBefore,
@@ -47,6 +37,7 @@ class $modify(SPLevelSearchLayer, LevelSearchLayer) {
         Ref<GJSearchObject> searchObject;
         Ref<CCLabelBMFont> pageText;
         Ref<CCMenuItemSpriteExtra> pageButton;
+        Ref<CCMenuItemSpriteExtra> refreshButton;
         long long debounceTime = -1LL;
         long long lastQueryTime = -1LL;
 
@@ -75,12 +66,12 @@ class $modify(SPLevelSearchLayer, LevelSearchLayer) {
         const auto winSize = CCDirector::sharedDirector()->getWinSize();
 
         m_fields->searchList = Build(cue::ListNode::create(
-            {358.0f, 220.0f},
+            {358.0f, 210.0f},
             cue::Brown,
             cue::ListBorderStyle::SlimLevels
         ))
             .anchorPoint({0.5f, 0.5f})
-            .pos(winSize / 2.0f - CCPoint{0.0f, 20.0f})
+            .pos(winSize / 2.0f - CCPoint{0.0f, 15.0f})
             .visible(false)
             .id("search-list"_spr)
             .zOrder(10)
@@ -130,6 +121,30 @@ class $modify(SPLevelSearchLayer, LevelSearchLayer) {
             .move(m_fields->searchList->getScaledContentSize() / 2.0f)
             .move({5.0f, 5.0f});
 
+        m_fields->refreshButton = Build<CCSprite>::createSpriteName("GJ_updateBtn_001.png")
+            .intoMenuItem([this](auto) {
+                if (!m_fields->searchObject) return;
+
+                for (int i = m_fields->startPage; i <= m_fields->endPage; i++) {
+                    GJSearchObject* newObject = getSearchObject(m_fields->searchObject->m_searchType, m_fields->searchObject->m_searchQuery);
+                    newObject->m_page = i;
+
+                    GameLevelManager::get()->resetTimerForKey(newObject->getKey());
+                    failedRequests.erase(newObject->getKey());
+                    newObject->release();
+                }
+
+                m_fields->startPage = m_fields->activePage;
+                m_fields->endPage = m_fields->activePage;
+                showQuery();
+            })
+            .anchorPoint({0.5f, 0.5f})
+            .visible(false)
+            .id("refresh-button"_spr)
+            .parent(searchMenu)
+            .matchPos(m_fields->searchList)
+            .move({m_fields->searchList->getScaledContentSize().width / 2.0f + 5.0f, -m_fields->searchList->getScaledContentSize().height / 2.0f - 5.0f});
+
         m_fields->searchDelegate.setFinishedCallback([this](CCArray* levels, const char* key) {
             if (!m_fields->searchObject || strcmp(m_fields->searchObject->getKey(), key) != 0) return;
 
@@ -142,7 +157,7 @@ class $modify(SPLevelSearchLayer, LevelSearchLayer) {
         m_fields->searchDelegate.setPageInfoCallback([this](const std::string& info, const char* key) {
             if (!m_fields->searchObject || strcmp(m_fields->searchObject->getKey(), key) != 0) return;
 
-            const std::vector<std::string> split = splitString(info, ':');
+            const std::vector<std::string> split = string::split(info, ":");
             const int total = utils::numFromString<int>(split[0]).unwrapOr(0);
             m_fields->perPage = utils::numFromString<int>(split[2]).unwrapOr(10);
             m_fields->totalPages = (total + m_fields->perPage - 1) / m_fields->perPage;
@@ -246,7 +261,7 @@ class $modify(SPLevelSearchLayer, LevelSearchLayer) {
     }
 
     void customUpdate(const float delta) {
-        if (m_fields->loadingState == LoadingState::NotLoading ) {
+        if (m_fields->loadingState == LoadingState::NotLoading) {
             CCContentLayer* cl = m_fields->searchList->getScrollLayer()->m_contentLayer;
             const float position = cl->getScaledContentHeight() + cl->getPositionY() - m_fields->searchList->getScrollLayer()->getContentSize().height;
             const float pageSize = m_fields->perPage * m_fields->activeCellHeight;
@@ -300,7 +315,11 @@ class $modify(SPLevelSearchLayer, LevelSearchLayer) {
     }
 
     void updateQuery(GJSearchObject* newObject) {
-        if (newObject && newObject->m_searchQuery.empty() && newObject->m_searchType == SearchType::Search) {
+        if (
+            newObject &&
+            newObject->m_searchQuery.empty() &&
+            (newObject->m_searchType == SearchType::Search || newObject->m_searchType == SearchType::Users)
+        ) {
             newObject = nullptr;
         }
 
@@ -324,11 +343,13 @@ class $modify(SPLevelSearchLayer, LevelSearchLayer) {
         m_fields->searchList->setVisible(m_fields->searchObject);
         if (!m_fields->searchObject) m_fields->loadingSpinner->setVisible(false);
         m_fields->pageButton->setVisible(m_fields->searchObject);
+        m_fields->refreshButton->setVisible(m_fields->searchObject);
         m_fields->pageText->setString(m_fields->searchObject ? std::to_string(m_fields->searchObject->m_page + 1).c_str() : "0");
         m_fields->pageText->limitLabelWidth(32.0f, 0.8f, 0.0f);
         getChildByID("quick-search-menu")->setVisible(!m_fields->searchObject);
         getChildByID("difficulty-filter-menu")->setVisible(!m_fields->searchObject);
         getChildByID("length-filter-menu")->setVisible(!m_fields->searchObject);
+        getChildByID("length-filters-bg")->setVisible(!m_fields->searchObject);
 
         m_fields->searchList->clear();
         if (!m_fields->searchObject) return;
@@ -385,7 +406,13 @@ class $modify(SPLevelSearchLayer, LevelSearchLayer) {
     }
 
     void onScrollToBottom() {
-        if (!m_fields->searchObject || m_fields->loadingState != LoadingState::NotLoading || !m_fields->hasMorePages) {
+        if (
+            !m_fields->searchObject ||
+            m_fields->loadingState != LoadingState::NotLoading ||
+            !m_fields->hasMorePages ||
+            (m_fields->totalPages > 0 && m_fields->endPage >= m_fields->totalPages - 1) ||
+            m_fields->searchList->getCells()->count() == 1
+        ) {
             return;
         }
 
